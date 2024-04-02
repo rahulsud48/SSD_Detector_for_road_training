@@ -12,7 +12,7 @@ from .encoder import DataEncoder
 
 
 class ListDataset(Dataset):
-    def __init__(self, root_dir, list_file, classes, mode, transform, input_size):
+    def __init__(self, root_dir, data_dir, list_file, classes, mode, transform, input_size):
         '''
         Args:
           root_dir: (str) ditectory to images.
@@ -22,6 +22,7 @@ class ListDataset(Dataset):
           input_size: (int) model input size.
         '''
         self.root_dir = root_dir
+        self.data_dir = data_dir
         self.classes = classes
         self.mode = mode
         self.transform = transform
@@ -65,7 +66,7 @@ class ListDataset(Dataset):
           cls_targets: (tensor) class label targets.
         '''
         # Load image and boxes.
-        path = os.path.join(self.root_dir, self.fnames[idx])
+        path = os.path.join(self.root_dir, self.data_dir, self.fnames[idx])
         img = cv2.imread(path)
         if img is None or np.prod(img.shape) == 0:
             print('cannot load image from path: ', path)

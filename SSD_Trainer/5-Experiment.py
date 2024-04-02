@@ -82,8 +82,22 @@ class Experiment:
         setup_system(system_config)
         self.dataset_train = ListDataset(
             root_dir=dataset_config.root_dir,
-            list_file='../train_anno.txt',
-            classes=["__background__", "person"],
+            data_dir = 'export',
+            list_file='annots_converted_train.txt',
+            classes=[
+                "__background__",
+                "biker",
+                "car",
+                "pedestrian",
+                "trafficLight",
+                "trafficLight-Green",
+                "trafficLight-GreenLeft",
+                "trafficLight-Red",
+                "trafficLight-RedLeft",
+                "trafficLight-Yellow",
+                "trafficLight-YellowLeft",
+                "truck"
+            ],
             mode='train',
             transform=Compose(dataset_config.train_transforms),
             input_size=300
@@ -100,8 +114,22 @@ class Experiment:
 
         self.dataset_test = ListDataset(
             root_dir=dataset_config.root_dir,
-            list_file='../test_anno.txt',
-            classes=["__background__", "person"],
+            data_dir = 'export',
+            list_file='annots_converted_test.txt',
+            classes=[
+                "__background__",
+                "biker",
+                "car",
+                "pedestrian",
+                "trafficLight",
+                "trafficLight-Green",
+                "trafficLight-GreenLeft",
+                "trafficLight-Red",
+                "trafficLight-RedLeft",
+                "trafficLight-Yellow",
+                "trafficLight-YellowLeft",
+                "truck"
+            ],
             mode='val',
             transform=Compose([Normalize(), ToTensorV2()]),
             input_size=300
@@ -249,9 +277,8 @@ class Experiment:
 if __name__ == '__main__':
     dataloader_config, trainer_config = patch_configs(epoch_num_to_set=100, batch_size_to_set=30)
     # Downloading dataset
-    DataSetDownloader(root_dir='data', dataset_title='PennFudanPed', download=True)
     dataset_config = configuration.DatasetConfig(
-        root_dir="data/PennFudanPed/",
+        root_dir="../../Datasets/Road_Scene_Object_Detection",
         train_transforms=[
             RandomBrightness(p=0.5),
             RandomContrast(p=0.5),
