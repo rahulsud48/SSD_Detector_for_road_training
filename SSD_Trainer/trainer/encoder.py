@@ -18,7 +18,20 @@ class DataEncoder:
             anchor_grid = generate_anchor_grid(input_size, fm_size, anchors)
             self.anchor_boxes.append(anchor_grid)
         self.anchor_boxes = torch.cat(self.anchor_boxes, 0)
-        self.classes = ["__background__", "person"]
+        self.classes = [
+        "__background__",
+        "biker",
+        "car",
+        "pedestrian",
+        "trafficLight",
+        "trafficLight-Green",
+        "trafficLight-GreenLeft",
+        "trafficLight-Red",
+        "trafficLight-RedLeft",
+        "trafficLight-Yellow",
+        "trafficLight-YellowLeft",
+        "truck"
+        ]
 
     def encode(self, boxes, classes):
         iou = compute_iou(boxes, self.anchor_boxes)

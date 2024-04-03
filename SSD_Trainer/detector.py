@@ -26,7 +26,7 @@ class Detector(nn.Module):
             )  # [N, 9*4,H,W] -> [N,H,W, 9*4] -> [N,H*W*9, 4]
             cls_pred = cls_pred.permute(0, 2, 3, 1).contiguous().view(
                 x.size(0), -1, self.num_classes
-            )  # [N,9*20,H,W] -> [N,H,W,9*20] -> [N,H*W*9,20]
+            )  # [N,9*2,H,W] -> [N,H,W,9*2] -> [N,H*W*9,20]
             loc_preds.append(loc_pred)
             cls_preds.append(cls_pred)
             

@@ -48,6 +48,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 from albumentations.pytorch.transforms import ToTensorV2
 from albumentations.augmentations.transforms import HueSaturationValue
 from albumentations.augmentations.transforms import Normalize
+from albumentations import Resize
 
 from trainer import Trainer, hooks, configuration
 from detector import Detector
@@ -83,7 +84,7 @@ class Experiment:
         self.dataset_train = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_converted_train.txt',
+            list_file='annots_transformed_train.txt',
             classes=[
                 "__background__",
                 "biker",
@@ -115,7 +116,7 @@ class Experiment:
         self.dataset_test = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_converted_test.txt',
+            list_file='annots_transformed_test.txt',
             classes=[
                 "__background__",
                 "biker",
@@ -291,6 +292,7 @@ if __name__ == '__main__':
             OneOf([Blur(always_apply=True), GaussNoise(always_apply=True)], p=1),
             CLAHE(),
             Normalize(),
+            Resize(height=300, width=300),
             ToTensorV2()
         ]
     )
