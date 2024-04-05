@@ -84,20 +84,24 @@ class Experiment:
         self.dataset_train = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_transformed_train.txt',
+            list_file='annots_transformed_train_one_class.txt',
+            # classes=[
+            #     "__background__",
+            #     "biker",
+            #     "car",
+            #     "pedestrian",
+            #     "trafficLight",
+            #     "trafficLight-Green",
+            #     "trafficLight-GreenLeft",
+            #     "trafficLight-Red",
+            #     "trafficLight-RedLeft",
+            #     "trafficLight-Yellow",
+            #     "trafficLight-YellowLeft",
+            #     "truck"
+            # ],
             classes=[
                 "__background__",
-                "biker",
-                "car",
-                "pedestrian",
-                "trafficLight",
-                "trafficLight-Green",
-                "trafficLight-GreenLeft",
-                "trafficLight-Red",
-                "trafficLight-RedLeft",
-                "trafficLight-Yellow",
-                "trafficLight-YellowLeft",
-                "truck"
+                "object"
             ],
             mode='train',
             transform=Compose(dataset_config.train_transforms),
@@ -116,20 +120,24 @@ class Experiment:
         self.dataset_test = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_transformed_test.txt',
+            list_file='annots_transformed_test_one_class.txt',
+            # classes=[
+            #     "__background__",
+            #     "biker",
+            #     "car",
+            #     "pedestrian",
+            #     "trafficLight",
+            #     "trafficLight-Green",
+            #     "trafficLight-GreenLeft",
+            #     "trafficLight-Red",
+            #     "trafficLight-RedLeft",
+            #     "trafficLight-Yellow",
+            #     "trafficLight-YellowLeft",
+            #     "truck"
+            # ],
             classes=[
                 "__background__",
-                "biker",
-                "car",
-                "pedestrian",
-                "trafficLight",
-                "trafficLight-Green",
-                "trafficLight-GreenLeft",
-                "trafficLight-Red",
-                "trafficLight-RedLeft",
-                "trafficLight-Yellow",
-                "trafficLight-YellowLeft",
-                "truck"
+                "object"
             ],
             mode='val',
             transform=Compose([Normalize(), ToTensorV2()]),
