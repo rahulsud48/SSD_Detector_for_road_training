@@ -106,7 +106,7 @@ def train_hook_detection(
             prefix, i, loss_avg.avg, loss_avg.val, loc_loss, cls_loss, optimizer.param_groups[0]["lr"]
         )
         iterator.set_description(status)
-    return {"loss": loss_avg.avg}
+    return {"loss": loss_avg.avg} 
 
 
 def test_hook_default(
