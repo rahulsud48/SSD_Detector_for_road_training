@@ -163,7 +163,6 @@ class ListDataset(Dataset):
         if self.transform:
             img = self.transform(image=img)['image']
 
-
         return img, boxes, labels
 
 
