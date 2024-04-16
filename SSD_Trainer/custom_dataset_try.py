@@ -162,6 +162,7 @@ class ListDataset(Dataset):
         img = np.array(img)
         if self.transform:
             img = self.transform(image=img)['image']
+            
         return img, boxes, labels
 
 
