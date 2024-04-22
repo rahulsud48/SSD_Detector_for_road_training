@@ -84,25 +84,25 @@ class Experiment:
         self.dataset_train = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_transformed_train_one_class.txt',
-            # classes=[
-            #     "__background__",
-            #     "biker",
-            #     "car",
-            #     "pedestrian",
-            #     "trafficLight",
-            #     "trafficLight-Green",
-            #     "trafficLight-GreenLeft",
-            #     "trafficLight-Red",
-            #     "trafficLight-RedLeft",
-            #     "trafficLight-Yellow",
-            #     "trafficLight-YellowLeft",
-            #     "truck"
-            # ],
+            list_file='annots_converted_train.txt',
             classes=[
                 "__background__",
-                "object"
+                "biker",
+                "car",
+                "pedestrian",
+                "trafficLight",
+                "trafficLight-Green",
+                "trafficLight-GreenLeft",
+                "trafficLight-Red",
+                "trafficLight-RedLeft",
+                "trafficLight-Yellow",
+                "trafficLight-YellowLeft",
+                "truck"
             ],
+            # classes=[
+            #     "__background__",
+            #     "object"
+            # ],
             mode='train',
             transform=Compose(dataset_config.train_transforms),
             input_size=300
@@ -120,25 +120,25 @@ class Experiment:
         self.dataset_test = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_transformed_test_one_class.txt',
-            # classes=[
-            #     "__background__",
-            #     "biker",
-            #     "car",
-            #     "pedestrian",
-            #     "trafficLight",
-            #     "trafficLight-Green",
-            #     "trafficLight-GreenLeft",
-            #     "trafficLight-Red",
-            #     "trafficLight-RedLeft",
-            #     "trafficLight-Yellow",
-            #     "trafficLight-YellowLeft",
-            #     "truck"
-            # ],
+            list_file='annots_converted_test.txt',
             classes=[
                 "__background__",
-                "object"
+                "biker",
+                "car",
+                "pedestrian",
+                "trafficLight",
+                "trafficLight-Green",
+                "trafficLight-GreenLeft",
+                "trafficLight-Red",
+                "trafficLight-RedLeft",
+                "trafficLight-Yellow",
+                "trafficLight-YellowLeft",
+                "truck"
             ],
+            # classes=[
+            #     "__background__",
+            #     "object"
+            # ],
             mode='val',
             transform=Compose([Normalize(), ToTensorV2()]),
             input_size=300

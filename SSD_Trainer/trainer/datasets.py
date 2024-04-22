@@ -79,9 +79,9 @@ class ListDataset(Dataset):
         size = self.input_size
 
         # # Resize & Flip
-        # img, boxes = resize(img, boxes, (size, size))
-        # if self.mode == 'train':
-        #     img, boxes = random_flip(img, boxes)
+        img, boxes = resize(img, boxes, (size, size))
+        if self.mode == 'train':
+            img, boxes = random_flip(img, boxes)
         # Data augmentation.
         img = np.array(img)
         if self.transform:

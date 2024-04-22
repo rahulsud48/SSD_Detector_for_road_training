@@ -41,3 +41,14 @@ class Detector(nn.Module):
             layers.append(nn.ReLU(True))
         layers.append(nn.Conv2d(64, out_planes, kernel_size=3, stride=1, padding=1))
         return nn.Sequential(*layers)
+
+if __name__ == "__main__":
+    image_inputs = torch.rand((2, 3, 300, 300))
+    detector = Detector(num_classes=11)
+
+    location_pred, class_pred = detector(image_inputs)
+
+    print('location_pred size: {}'.format(location_pred.size()))
+
+    print('class_pred size: {}'.format(class_pred.size()))
+    print()
