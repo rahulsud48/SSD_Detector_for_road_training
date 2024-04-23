@@ -84,7 +84,7 @@ class Experiment:
         self.dataset_train = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_converted_train.txt',
+            list_file='annots_transformed_train.txt',
             classes=[
                 "__background__",
                 "biker",
@@ -120,7 +120,7 @@ class Experiment:
         self.dataset_test = ListDataset(
             root_dir=dataset_config.root_dir,
             data_dir = 'export',
-            list_file='annots_converted_test.txt',
+            list_file='annots_transformed_test.txt',
             classes=[
                 "__background__",
                 "biker",
