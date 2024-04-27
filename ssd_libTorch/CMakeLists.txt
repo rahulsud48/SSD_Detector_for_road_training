@@ -24,7 +24,7 @@ project(inference)
 # packages required
 find_package(PCL 1.2 REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
-find_package(Torch REQUIRED)
+find_package(Torch REQUIRED PATHS "../libtorch" )
 
 # directories 
 include_directories( ${OpenCV_INCLUDE_DIRS} ${PCL_INCLUDE_DIRS})
@@ -33,14 +33,19 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
-# MACRO(add_example name)
-#   ADD_EXECUTABLE(${name} ${name}.cpp)
-#   TARGET_LINK_LIBRARIES(${name} ${OpenCV_LIBS} )
-# ENDMACRO()
+MACRO(add_example name)
+  ADD_EXECUTABLE(${name} ${name}.cpp)
+  TARGET_LINK_LIBRARIES(${name} ${OpenCV_LIBS} )
+ENDMACRO()
 
 # executable
 add_executable(inference inference.cpp)
 target_link_libraries(inference "${TORCH_LIBRARIES}")
 target_link_libraries (inference ${PCL_LIBRARIES} ${OpenCV_LIBS})
 target_include_directories(inference PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(inference 
+    -lopencv_core 
+    -lopencv_imgcodecs 
+    -lopencv_highgui 
+)
 # set_property(TARGET inference PROPERTY CXX_STANDARD 14)
