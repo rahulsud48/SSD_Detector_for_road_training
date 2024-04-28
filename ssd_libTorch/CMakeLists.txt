@@ -39,7 +39,7 @@ MACRO(add_example name)
 ENDMACRO()
 
 # executable
-add_executable(inference inference.cpp)
+add_executable(inference src/inference.cpp)
 target_link_libraries(inference "${TORCH_LIBRARIES}")
 target_link_libraries (inference ${PCL_LIBRARIES} ${OpenCV_LIBS})
 target_include_directories(inference PRIVATE ${OpenCV_INCLUDE_DIRS})
