@@ -9,6 +9,7 @@
 #include "opencv2/imgcodecs.hpp"
 
 #include <iostream>
+#include <cmath> 
 
 using namespace std;
 
@@ -92,7 +93,32 @@ void transform_image(cv::Mat* img, torch::Tensor* img_tensor)
     *img_tensor = img_tensor->unsqueeze(0);  // [1, channels, height, width]
 }
 
+// data encoder functions
 
+std::vector<double> generate_anchor_boxes()
+{
+    std::vector<double> anchor_areas;
+    for (int i=3; i<8; i++)
+    {
+        anchor_areas.push_back(std::pow(std::pow(2,i),2));
+    }
+
+    std::vector<double> aspect_ratios{0.5,1,2};
+
+    int num_fms = 5;
+
+    std::vector<float> scales;
+
+    for (int i=0; i<3; i++)
+    {
+        // float pow = (float)(i/3);
+        scales.push_back(std::pow(2.,(float)(i/3)));
+    }
+
+    return anchor_areas;
+
+
+}
 
 
 int main() {
@@ -134,6 +160,7 @@ int main() {
     std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
     std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
 
+    vector<double> test = generate_anchor_boxes();
 
     return 0;
 

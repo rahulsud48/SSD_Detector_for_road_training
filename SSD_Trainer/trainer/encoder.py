@@ -162,3 +162,6 @@ def compute_nms(boxes, conf, threshold=0.5):
             break
         order = order[ids + 1]
     return torch.LongTensor(keep)
+
+if __name__ == "__main__":
+    pass
