@@ -6,7 +6,6 @@ import random
 import numpy as np
 import math
 
-
 # from albumentations import (
 #     CLAHE,
 #     Blur,
@@ -21,6 +20,10 @@ import math
 from albumentations import Compose
 from albumentations.augmentations.transforms import Normalize
 from albumentations.pytorch.transforms import ToTensorV2
+
+from detector import Detector
+
+
 
 class DataEncoder:
     def __init__(self, input_size, classes):
@@ -168,22 +171,74 @@ class DataEncoder:
             order = order[ids + 1]
         return torch.LongTensor(keep)
 
-if __name__ == "__main__":
-    input_size = (300,300)
-    classes=[
-    "__background__",
-    "biker",
-    "car",
-    "pedestrian",
-    "trafficLight",
-    "trafficLight-Green",
-    "trafficLight-GreenLeft",
-    "trafficLight-Red",
-    "trafficLight-RedLeft",
-    "trafficLight-Yellow",
-    "trafficLight-YellowLeft",
-    "truck"
-    ]
-    encoder = DataEncoder(input_size, classes)
-    encoder.encode(boxes, classes)
+class road_scene_detection(object):
+    
+    def __init__(self, model_path, input_size, classes, device_name = 'cpu'):
+        
+        self.model_path = model_path
+        self.classes = classes
+        self.input_size = input_size
+        
+        self.encoder = DataEncoder(self.input_size, self.classes)
+        self.transform = Compose([Normalize(), ToTensorV2()])
+        self.device = self.configure_device(device_name)
+        self.load_model()
+        
+    def configure_device(self, device_name):
+        self.device = torch.device(device_name)
+        
+    def load_model(self):
+        self.model = Detector(len(self.classes))
+        self.model.load_state_dict(
+                        torch.load(self.model_path)
+                    )
+        self.model = self.model.eval()
+        self.model.to(self.device)
+        
+    def transform_image(self, img):
+        img = img[..., ::-1]
+        img = cv2.resize(img, self.input_size)
+        img = np.array(img)
+        img = self.transform(image=img)['image']
+        return img
+    
+    def transform_detections(self, loc_preds, cls_preds):
+        with torch.no_grad():
+            samples = self.encoder.decode(loc_preds, cls_preds)
+        return samples
+            
+    def predict(self, img_path):
+        img = cv2.imread(img_path)
+        img_orig = np.array(img)
+        img = self.transform_image(img)
+        img = img.to(self.device)
+        loc_preds, cls_preds = self.model(img.unsqueeze(0))
+        detections = self.transform_detections(loc_preds, cls_preds)
+        return detections
+        
 
+if __name__ == "__main__":
+    classes=[
+        "__background__",
+        "biker",
+        "car",
+        "pedestrian",
+        "trafficLight",
+        "trafficLight-Green",
+        "trafficLight-GreenLeft",
+        "trafficLight-Red",
+        "trafficLight-RedLeft",
+        "trafficLight-Yellow",
+        "trafficLight-YellowLeft",
+        "truck"
+    ]
+
+    model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/checkpoints/Detector_best.pth"
+    root_dir = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Datasets/Road_Scene_Object_Detection/export"
+    file_name = "1478732741316067783_jpg.rf.bd19503e85e0a6169720bc906e6a4a51.jpg"
+    image_path = os.path.join(root_dir, file_name)
+
+    input_size = (300,300)
+
+    detector_ssd = road_scene_detection(model_path, input_size, classes)
+    detections = detector_ssd.predict(image_path)

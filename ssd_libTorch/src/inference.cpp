@@ -95,6 +95,120 @@ void transform_image(cv::Mat* img, torch::Tensor* img_tensor)
 
 // data encoder functions
 
+class DataEncoder
+{
+private:
+    int img_w; 
+    int img_h;
+    int num_classes;
+    int num_fms = 5;
+    float cls_threshold=0.7f;
+    float nms_threshold=0.3f;
+    std::vector<float> anchor_areas;
+    std::vector<float> aspect_ratios{0.5,1,2};
+    std::vector<float> scales;
+    std::vector<int> fm_sizes;
+    torch::Tensor anchor_boxes_tensor;
+    // std::vector<torch::Tensor> anchors;
+    // std::vector<torch::Tensor> anchor_grid;
+    // std::vector<torch::Tensor> anchor_boxes;
+    void createParameters()
+    {
+        // creating areas for anchor boxes
+        for (int i=3; i<8; i++)
+        {
+            anchor_areas.push_back(std::pow(std::pow(2,i),2));
+        }
+        // creating scales
+        for (int i=0; i<3; i++)
+        {
+            float power = (float)((float)i/3);
+            scales.push_back(std::pow(2.,(float)((float)i/3)));
+        }
+        // creating feature maps sizes
+        for (int i=0; i<5; i++)
+        {
+            fm_sizes.push_back(std::ceil(300/std::pow(2.0, i+3)));
+        }
+        int i = 0;
+        std::vector<torch::Tensor> anchor_boxes;
+        for (const auto& fm_size : fm_sizes)
+        {
+            torch::Tensor anchors = generate_anchors(anchor_areas[i], aspect_ratios, scales);
+            torch::Tensor anchor_grid = generate_anchor_grid(img_w, img_h, fm_size, anchors);
+            anchor_boxes.push_back(anchor_grid);
+            i++;
+        }
+        anchor_boxes_tensor = torch::cat(anchor_boxes, 0);
+        std::cout << "Shape of concatenated tensor: " << anchor_boxes_tensor.sizes() << std::endl;
+    }
+
+    torch::Tensor generate_anchor_grid(int img_w, int img_h, int fm_size, torch::Tensor anchors)
+    {
+        float grid_size = (float)img_w/(float)fm_size;
+        std::vector<torch::Tensor> meshgrid = torch::meshgrid({torch::arange(0, fm_size) * grid_size, torch::arange(0, fm_size) * grid_size});
+        
+        anchors = anchors.view({-1, 1, 1, 4});
+        torch::Tensor xyxy = torch::stack({meshgrid[0], meshgrid[1], meshgrid[0], meshgrid[1]}, 2).to(torch::kFloat);
+        auto boxes = (xyxy + anchors).permute({2, 1, 0, 3}).contiguous().view({-1, 4});
+        // Clamp the coordinates to the input size
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(0, -1, 2)}).clamp_(0, img_w);
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(1, -1, 2)}).clamp_(0, img_h);
+        return boxes;
+
+    }
+
+    torch::Tensor generate_anchors(float anchor_area, std::vector<float> aspect_ratios, std::vector<float> scales)
+    {
+        std::vector<std::vector<float>> anchors;
+        for (const auto& scale : scales )
+        {
+            for (const auto& ratio : aspect_ratios)
+            {
+                float h = std::round(std::pow(anchor_area,0.5)/ratio);
+                float w = std::round(ratio*h);
+                float x1 = (std::pow(anchor_area,0.5) - scale * w) * 0.5f;
+                float x2 = (std::pow(anchor_area,0.5) + scale * w) * 0.5f;
+                float y1 = (std::pow(anchor_area,0.5) - scale * h) * 0.5f;
+                float y2 = (std::pow(anchor_area,0.5) + scale * h) * 0.5f;
+                anchors.push_back({x1,y1,x2,y2});
+            }
+        }
+        torch::Tensor anchors_tensor = convert_2dvec_to_torch_tensor(anchors);
+        return anchors_tensor;
+    }
+
+    torch::Tensor convert_2dvec_to_torch_tensor(std::vector<std::vector<float>> array_2d)
+    {
+        // use template to handle other data structures
+        std::vector<float> flat_array;
+        for (const auto& inner_vec : array_2d) 
+        {
+            flat_array.insert(flat_array.end(), inner_vec.begin(), inner_vec.end());
+        }
+        auto tensor = torch::tensor(flat_array, torch::kFloat);
+        // Reshape the tensor to match the original 2D structure
+        int rows = array_2d.size();  // Number of outer vectors
+        int cols = array_2d[0].size();  // Assumes all inner vectors have the same size
+        torch::Tensor reshaped_tensor = tensor.view({rows, cols});
+        return reshaped_tensor;
+    }
+
+public:
+    DataEncoder(std::map<std::string,int> img_size, int num_classes)
+    {
+        this->img_w = img_size["width"];
+        this->img_h = img_size["height"];
+        this->num_classes = num_classes;
+        createParameters();
+    }
+
+    void decode(torch::Tensor loc_pred, torch::Tensor cls_pred)
+    {
+        
+    }
+};
+
 std::vector<double> generate_anchor_boxes()
 {
     std::vector<double> anchor_areas;
@@ -108,11 +222,18 @@ std::vector<double> generate_anchor_boxes()
     int num_fms = 5;
 
     std::vector<float> scales;
+    std::vector<int> fm_sizes;
+    std::vector<torch::Tensor> anchor_boxes;
 
     for (int i=0; i<3; i++)
     {
-        // float pow = (float)(i/3);
-        scales.push_back(std::pow(2.,(float)(i/3)));
+        float power = (float)((float)i/3);
+        scales.push_back(std::pow(2.,(float)((float)i/3)));
+    }
+
+    for (int i=0; i<5; i++)
+    {
+        fm_sizes.push_back(std::ceil(300/std::pow(2.0, i+3)));
     }
 
     return anchor_areas;
@@ -160,7 +281,17 @@ int main() {
     std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
     std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
 
-    vector<double> test = generate_anchor_boxes();
+    // vector<double> test = generate_anchor_boxes();
+
+    // variables for data encoder class
+
+    std::map<std::string, int> img_size;
+    img_size["width"] = 300;
+    img_size["height"] = 300;
+
+    int num_classes = 12;
+
+    DataEncoder encoder(img_size, num_classes);
 
     return 0;
 
