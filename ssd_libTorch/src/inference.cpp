@@ -203,43 +203,56 @@ public:
         createParameters();
     }
 
-    void decode(torch::Tensor loc_pred, torch::Tensor cls_pred)
+    torch::Tensor decode_boxes(const torch::Tensor& deltas, const torch::Tensor& anchors) {
+        // Calculate the width and height of the anchors
+        auto anchors_wh = anchors.slice(1, 2, 4) - anchors.slice(1, 0, 2) + 1;
+
+        // Calculate the centers of the anchors
+        auto anchors_ctr = anchors.slice(1, 0, 2) + 0.5 * anchors_wh;
+
+        // Calculate the centers of the predicted boxes
+        auto pred_ctr = deltas.slice(1, 0, 2) * anchors_wh + anchors_ctr;
+
+        // Calculate the width and height of the predicted boxes
+        auto pred_wh = torch::exp(deltas.slice(1, 2, 4)) * anchors_wh;
+
+        // Calculate the top-left and bottom-right coordinates
+        auto top_left = pred_ctr - 0.5 * pred_wh;
+        auto bottom_right = pred_ctr + 0.5 * pred_wh - 1;
+
+        // Concatenate the top-left and bottom-right coordinates
+        auto result = torch::cat({top_left, bottom_right}, 1);
+
+        return result;
+    }
+
+    void decode(torch::Tensor loc_pred, torch::Tensor cls_pred, int batch_size)
     {
+        for (int i=0; i<batch_size; i++)
+        {
+            torch::Tensor boxes = decode_boxes(loc_pred[i], anchor_boxes_tensor);
+            torch::Tensor conf = cls_pred[i].softmax(1);
+            for (int j=1; j<num_classes;j++)
+            {
+                torch::Tensor class_conf = conf.index({torch::indexing::Slice(), 1});
+                // Find indices where class_conf exceeds cls_threshold
+                auto ids_tensor = (class_conf > cls_threshold).nonzero();
+
+                // Squeeze the tensor to remove extra dimensions
+                auto ids_squeezed = ids_tensor.squeeze();
+
+                // Convert to a list of indices
+                std::vector<int64_t> ids_list;
+                ids_squeezed = ids_squeezed.view(-1);  // Ensure tensor is 1D
+
+                ids_list.assign(ids_squeezed.data_ptr<int64_t>(), ids_squeezed.data_ptr<int64_t>() + ids_squeezed.numel());
+            }
+            std::cout<<boxes.sizes()<<"\n";
+        }
         
     }
 };
 
-std::vector<double> generate_anchor_boxes()
-{
-    std::vector<double> anchor_areas;
-    for (int i=3; i<8; i++)
-    {
-        anchor_areas.push_back(std::pow(std::pow(2,i),2));
-    }
-
-    std::vector<double> aspect_ratios{0.5,1,2};
-
-    int num_fms = 5;
-
-    std::vector<float> scales;
-    std::vector<int> fm_sizes;
-    std::vector<torch::Tensor> anchor_boxes;
-
-    for (int i=0; i<3; i++)
-    {
-        float power = (float)((float)i/3);
-        scales.push_back(std::pow(2.,(float)((float)i/3)));
-    }
-
-    for (int i=0; i<5; i++)
-    {
-        fm_sizes.push_back(std::ceil(300/std::pow(2.0, i+3)));
-    }
-
-    return anchor_areas;
-
-
-}
 
 
 int main() {
@@ -268,18 +281,18 @@ int main() {
     std::cout<<"Output size is "<<boxes.sizes()<<std::endl;
     std::cout<<"Output size is "<<classes.sizes()<<std::endl;
 
-    saveTensor(boxes, "boxes.bin");
-    saveTensor(classes, "classes.bin");
+    // saveTensor(boxes, "boxes.bin");
+    // saveTensor(classes, "classes.bin");
 
 
-    std::vector<int64_t> boxes_shape = {1, 17451, 4};
-    std::vector<int64_t> classes_shape = {1, 17451, 12};
+    // std::vector<int64_t> boxes_shape = {1, 17451, 4};
+    // std::vector<int64_t> classes_shape = {1, 17451, 12};
 
-    torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
-    torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
+    // torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
+    // torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
 
-    std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
-    std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
+    // std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
+    // std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
 
     // vector<double> test = generate_anchor_boxes();
 
@@ -290,8 +303,13 @@ int main() {
     img_size["height"] = 300;
 
     int num_classes = 12;
+    int batch_size = 1;
+
+    // std::cout<<boxes[0].sizes()<<"\n";
+    // std::cout<<boxes[0]<<"\n";
 
     DataEncoder encoder(img_size, num_classes);
+    encoder.decode(boxes, classes, batch_size);
 
     return 0;
 

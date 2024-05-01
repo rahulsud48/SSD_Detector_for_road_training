@@ -234,9 +234,9 @@ if __name__ == "__main__":
     ]
 
     model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/checkpoints/Detector_best.pth"
-    root_dir = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Datasets/Road_Scene_Object_Detection/export"
-    file_name = "1478732741316067783_jpg.rf.bd19503e85e0a6169720bc906e6a4a51.jpg"
-    image_path = os.path.join(root_dir, file_name)
+    # root_dir = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Datasets/Road_Scene_Object_Detection/export"
+    # file_name = "1478732741316067783_jpg.rf.bd19503e85e0a6169720bc906e6a4a51.jpg"
+    image_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/test_image.jpg"
 
     input_size = (300,300)
 
