@@ -140,7 +140,7 @@ private:
             i++;
         }
         anchor_boxes_tensor = torch::cat(anchor_boxes, 0);
-        std::cout << "Shape of concatenated tensor: " << anchor_boxes_tensor.sizes() << std::endl;
+        std::cout << "Shape of concatenated tensor: " << anchor_boxes_tensor << std::endl;
     }
 
     torch::Tensor generate_anchor_grid(int img_w, int img_h, int fm_size, torch::Tensor anchors)
@@ -152,8 +152,10 @@ private:
         torch::Tensor xyxy = torch::stack({meshgrid[0], meshgrid[1], meshgrid[0], meshgrid[1]}, 2).to(torch::kFloat);
         auto boxes = (xyxy + anchors).permute({2, 1, 0, 3}).contiguous().view({-1, 4});
         // Clamp the coordinates to the input size
-        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(0, -1, 2)}).clamp_(0, img_w);
-        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(1, -1, 2)}).clamp_(0, img_h);
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(0)}).clamp_(0, img_w);
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(2)}).clamp_(0, img_w);
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(1)}).clamp_(0, img_h);
+        boxes.index({torch::indexing::Slice(), torch::indexing::Slice(3)}).clamp_(0, img_h);
         return boxes;
 
     }
@@ -226,6 +228,66 @@ public:
         return result;
     }
 
+    torch::Tensor compute_nms(const torch::Tensor& boxes, const torch::Tensor& conf, float threshold = 0.5) {
+        // Extract box coordinates
+        auto x1 = boxes.index({torch::indexing::Slice(), 0});
+        auto y1 = boxes.index({torch::indexing::Slice(), 1});
+        auto x2 = boxes.index({torch::indexing::Slice(), 2});
+        auto y2 = boxes.index({torch::indexing::Slice(), 3});
+
+        // Calculate areas of the boxes
+        auto areas = (x2 - x1 + 1) * (y2 - y1 + 1);
+
+        // Sort confidence in descending order and get the sorted indices
+        auto sorted_result = conf.sort(0, /*descending=*/true);
+        auto order = std::get<1>(sorted_result);
+
+        // List to keep indices of boxes that pass NMS
+        std::vector<int64_t> keep;
+
+        while (order.numel() > 0) {
+            int64_t i = order[0].item<int64_t>();
+            keep.push_back(i);
+
+            if (order.numel() == 1) {
+                break;
+            }
+
+            // Get the indices except the first one (rest)
+            auto rest = order.index({torch::indexing::Slice(1, torch::indexing::None)});
+            
+            // Calculate overlap with the rest of the boxes
+            auto xx1 = x1.index(rest).clamp_min(x1[i]);
+            auto yy1 = y1.index(rest).clamp_min(y1[i]);
+            auto xx2 = x2.index(rest).clamp_max(x2[i]);
+            auto yy2 = y2.index(rest).clamp_max(y2[i]);
+
+            auto w = (xx2 - xx1 + 1).clamp_min(0);
+            auto h = (yy2 - yy1 + 1).clamp_min(0);
+
+            auto inter = w * h;
+            auto ovr = inter / (areas[i] + areas.index(rest) - inter);
+
+            // Get indices where overlap is less than or equal to the threshold
+            auto valid_indices = (ovr <= threshold).nonzero().squeeze();
+
+            if (valid_indices.numel() == 0) {
+                break;
+            }
+
+            // Convert valid indices to a vector of indices
+            auto valid_indices_vec = valid_indices.to(torch::kInt64).contiguous().data_ptr<int64_t>();
+
+            // Convert valid_indices to a std::vector
+            std::vector<int64_t> valid_indices_std(valid_indices_vec, valid_indices_vec + valid_indices.numel());
+
+            // Use the converted indices to index the rest
+            order = rest.index({torch::tensor(valid_indices_std, torch::dtype(torch::kLong))});
+        }
+
+        return torch::tensor(keep, torch::dtype(torch::kLong));
+    }
+
     void decode(torch::Tensor loc_pred, torch::Tensor cls_pred, int batch_size)
     {
         for (int i=0; i<batch_size; i++)
@@ -242,10 +304,13 @@ public:
                 auto ids_squeezed = ids_tensor.squeeze();
 
                 // Convert to a list of indices
-                std::vector<int64_t> ids_list;
+                std::vector<int64_t> ids;
                 ids_squeezed = ids_squeezed.view(-1);  // Ensure tensor is 1D
 
-                ids_list.assign(ids_squeezed.data_ptr<int64_t>(), ids_squeezed.data_ptr<int64_t>() + ids_squeezed.numel());
+                ids.assign(ids_squeezed.data_ptr<int64_t>(), ids_squeezed.data_ptr<int64_t>() + ids_squeezed.numel());
+
+                torch::Tensor keep = compute_nms(boxes[ids], class_conf[ids], nms_threshold)
+                std::cout<<keep<<"\n";
             }
             std::cout<<boxes.sizes()<<"\n";
         }
@@ -257,42 +322,42 @@ public:
 
 int main() {
 
-    // Load the model insde the `ssd_detector`
-    std::string model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/tiny_model.pt";
-    // load test image
-    std::string image_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/test_image.jpg";
+    // // Load the model insde the `ssd_detector`
+    // std::string model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/tiny_model.pt";
+    // // load test image
+    // std::string image_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/test_image.jpg";
 
-    torch::jit::script::Module ssd_detector;
-    load_model(&model_path, ssd_detector);
+    // torch::jit::script::Module ssd_detector;
+    // load_model(&model_path, ssd_detector);
 
-    cv::Mat img;
-    load_image(&image_path, &img);
+    // cv::Mat img;
+    // load_image(&image_path, &img);
 
-    torch::Tensor img_tensor;
-    transform_image(&img, &img_tensor);
+    // torch::Tensor img_tensor;
+    // transform_image(&img, &img_tensor);
 
 
-    std::vector<torch::jit::IValue> jit_input;
-    jit_input.push_back(img_tensor);
+    // std::vector<torch::jit::IValue> jit_input;
+    // jit_input.push_back(img_tensor);
 
-    auto outputs = ssd_detector.forward(jit_input).toTuple();
-    torch::Tensor boxes = outputs->elements()[0].toTensor();
-    torch::Tensor classes = outputs->elements()[1].toTensor();
-    std::cout<<"Output size is "<<boxes.sizes()<<std::endl;
-    std::cout<<"Output size is "<<classes.sizes()<<std::endl;
+    // auto outputs = ssd_detector.forward(jit_input).toTuple();
+    // torch::Tensor boxes = outputs->elements()[0].toTensor();
+    // torch::Tensor classes = outputs->elements()[1].toTensor();
+    // std::cout<<"Output size is "<<boxes.sizes()<<std::endl;
+    // std::cout<<"Output size is "<<classes.sizes()<<std::endl;
 
     // saveTensor(boxes, "boxes.bin");
     // saveTensor(classes, "classes.bin");
 
 
-    // std::vector<int64_t> boxes_shape = {1, 17451, 4};
-    // std::vector<int64_t> classes_shape = {1, 17451, 12};
+    std::vector<int64_t> boxes_shape = {1, 17451, 4};
+    std::vector<int64_t> classes_shape = {1, 17451, 12};
 
-    // torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
-    // torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
+    torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
+    torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
 
-    // std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
-    // std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
+    std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
+    std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
 
     // vector<double> test = generate_anchor_boxes();
 
@@ -309,7 +374,10 @@ int main() {
     // std::cout<<boxes[0]<<"\n";
 
     DataEncoder encoder(img_size, num_classes);
-    encoder.decode(boxes, classes, batch_size);
+
+    // std::cout<<"Boxes Loaded: "<<boxes_loaded<<"\n";
+    // std::cout<<"classes Loaded: "<<classes_loaded<<"\n";
+    encoder.decode(boxes_loaded, classes_loaded, batch_size);
 
     return 0;
 

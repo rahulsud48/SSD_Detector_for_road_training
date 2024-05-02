@@ -168,6 +168,23 @@ class DataEncoder:
             order = order[ids + 1]
         return torch.LongTensor(keep)
 
+
+def load_binary(file_path, shape):
+# Read the binary data from the file
+    with open(file_path, "rb") as f:
+        # Read the entire file into a numpy array
+        binary_data = f.read()
+
+    # Convert the binary data to a numpy array of the correct type (float32)
+    # The data type must match what was used in the C++ code
+    tensor_data = np.frombuffer(binary_data, dtype=np.float32)
+
+    # Reshape the numpy array into the expected shape
+    tensor_data = tensor_data.reshape(shape)
+
+    # Convert the numpy array to a PyTorch tensor
+    return torch.from_numpy(tensor_data)
+
 if __name__ == "__main__":
     input_size = (300,300)
     classes=[
@@ -184,6 +201,12 @@ if __name__ == "__main__":
     "trafficLight-YellowLeft",
     "truck"
     ]
+    root = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build"
+    boxes_path = os.path.join(root, "boxes.bin")
+    classes_path = os.path.join(root, "classes.bin")
+    
+    loc_pred = load_binary(boxes_path, (1, 17451, 4))
+    cls_pred = load_binary(classes_path, (1, 17451, 12))
     encoder = DataEncoder(input_size, classes)
-    encoder.encode(boxes, classes)
+    encoder.decode(loc_pred, cls_pred)
 
