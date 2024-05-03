@@ -234,15 +234,8 @@ public:
         auto x2 = boxes.index({torch::indexing::Slice(), 2});
         auto y2 = boxes.index({torch::indexing::Slice(), 3});
 
-        std::cout<<x1<<"\n";
-        std::cout<<y1<<"\n";
-        std::cout<<x2<<"\n";
-        std::cout<<y2<<"\n";
-
         // Calculate areas of the boxes
         auto areas = (x2 - x1 + 1) * (y2 - y1 + 1);
-
-        std::cout<<areas<<"\n";
 
         // Sort confidence in descending order and get the sorted indices
         auto sorted_result = conf.sort(0, /*descending=*/true);
@@ -309,14 +302,11 @@ public:
         {
             std::map<int, torch::Tensor> out_boxes, out_cls;
             torch::Tensor boxes = decode_boxes(loc_pred[i], anchor_boxes_tensor);
-            std::cout<<boxes<<"\n";
             
             torch::Tensor conf = cls_pred[i].softmax(1);
-            std::cout<<conf<<"\n";
             for (int j=1; j<num_classes;j++)
             {
                 torch::Tensor class_conf = conf.index({torch::indexing::Slice(), j});
-                std::cout<<class_conf<<"\n";
                 // Find indices where class_conf exceeds cls_threshold
                 auto ids_tensor = (class_conf > cls_threshold).nonzero();
                 
@@ -329,38 +319,14 @@ public:
                 ids_squeezed = ids_squeezed.view(-1);  // Ensure tensor is 1D
 
                 ids.assign(ids_squeezed.data_ptr<int64_t>(), ids_squeezed.data_ptr<int64_t>() + ids_squeezed.numel());
-                std::cout<<ids_tensor<<"\n";
-                // std::cout<<loc_pred.sizes()<<"\n";
-                // std::cout<<loc_pred[0].sizes()<<"\n";
-                // std::cout<<cls_pred.sizes()<<"\n";
-                // std::cout<<cls_pred[0].sizes()<<"\n";
-
-                // std::cout<<boxes.sizes()<<"\n";
-                // std::cout<<conf.sizes()<<"\n";
-                // std::cout<<ids[0]<<"\n";
-                // std::cout<<boxes[ids[0]]<<"\n";
-                // std::cout<<boxes[ids[3]]<<"\n";
-                // std::cout<<boxes.index({torch::indexing::Slice(14559,14559+1)}).sizes()<<"\n";
-
                 torch::Tensor ids_map = torch::tensor(ids);
-                // std::cout<<ids_map<<"\n";
-
-                // torch::Tensor rough = boxes.index_select(0,ids_map);
-                // std::cout<<rough<<"\n";
-                // std::cout<<rough.sizes()<<"\n";
 
 
                 torch::Tensor keep = compute_nms(boxes.index_select(0,ids_map), class_conf.index_select(0,ids_map), nms_threshold);
-                std::cout<<keep<<"\n";
 
-                // torch::Tensor boxes_out = boxes.index_select(0,keep);
-                // torch::Tensor conf_out = class_conf.index_select(0,keep);
 
                 torch::Tensor boxes_out = boxes.index_select(0,ids_map).index_select(0,keep);
                 torch::Tensor conf_out = class_conf.index_select(0,ids_map).index_select(0,keep);
-
-                std::cout<<boxes_out<<"\n";
-                std::cout<<conf_out<<"\n";
 
                 out_boxes[j] = boxes_out;
                 out_cls[j] = conf_out;
@@ -398,8 +364,7 @@ int main() {
     // auto outputs = ssd_detector.forward(jit_input).toTuple();
     // torch::Tensor boxes = outputs->elements()[0].toTensor();
     // torch::Tensor classes = outputs->elements()[1].toTensor();
-    // std::cout<<"Output size is "<<boxes.sizes()<<std::endl;
-    // std::cout<<"Output size is "<<classes.sizes()<<std::endl;
+
 
     // saveTensor(boxes, "boxes.bin");
     // saveTensor(classes, "classes.bin");
@@ -425,13 +390,8 @@ int main() {
     int num_classes = 12;
     int batch_size = 1;
 
-    // std::cout<<boxes[0].sizes()<<"\n";
-    // std::cout<<boxes[0]<<"\n";
 
     DataEncoder encoder(img_size, num_classes);
-
-    // std::cout<<"Boxes Loaded: "<<boxes_loaded<<"\n";
-    // std::cout<<"classes Loaded: "<<classes_loaded<<"\n";
 
     std::vector<std::map<int, torch::Tensor>> output_boxes;
     std::vector<std::map<int, torch::Tensor>> output_classes;  
