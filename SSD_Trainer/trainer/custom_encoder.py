@@ -208,5 +208,6 @@ if __name__ == "__main__":
     loc_pred = load_binary(boxes_path, (1, 17451, 4))
     cls_pred = load_binary(classes_path, (1, 17451, 12))
     encoder = DataEncoder(input_size, classes)
-    encoder.decode(loc_pred, cls_pred)
+    all_boxes = encoder.decode(loc_pred, cls_pred)
+    print()
 
