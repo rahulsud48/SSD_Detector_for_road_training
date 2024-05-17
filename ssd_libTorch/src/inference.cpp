@@ -293,14 +293,15 @@ public:
     void decode(
         torch::Tensor loc_pred, 
         torch::Tensor cls_pred, 
-        std::vector<std::map<int, torch::Tensor>>& output_boxes, 
-        std::vector<std::map<int, torch::Tensor>>& output_classes, 
+        std::vector<std::map<int, std::vector<std::vector<float>>>>& output_boxes, 
+        std::vector<std::map<int, std::vector<int>>>& output_classes, 
         int batch_size
     )
     {
         for (int i=0; i<batch_size; i++)
         {
-            std::map<int, torch::Tensor> out_boxes, out_cls;
+            std::map<int, std::vector<std::vector<float>>> out_boxes;
+            std::map<int, std::vector<int>> out_cls;
             torch::Tensor boxes = decode_boxes(loc_pred[i], anchor_boxes_tensor);
             
             torch::Tensor conf = cls_pred[i].softmax(1);
@@ -328,8 +329,29 @@ public:
                 torch::Tensor boxes_out = boxes.index_select(0,ids_map).index_select(0,keep);
                 torch::Tensor conf_out = class_conf.index_select(0,ids_map).index_select(0,keep);
 
-                out_boxes[j] = boxes_out;
-                out_cls[j] = conf_out;
+                // out_boxes[j] = boxes_out;
+                // out_cls[j] = conf_out;
+
+                torch::IntArrayRef dimensions = boxes_out.sizes();
+                std::vector<int64_t> tensor_shape(dimensions.begin(), dimensions.end());
+
+                std::vector<std::vector<float>> float_boxes;
+                std::vector<int> float_cls;
+                for (int64_t k = 0; k < tensor_shape[0]; k++)
+                {
+                    std::vector<float> float_box;
+
+                    // Extract the coordinates from the tensor
+                    for (int64_t l=0; l < tensor_shape[1]; l++)
+                    {
+                        float_box.push_back(boxes_out[k][l].item<float>());
+                    }
+                    float_cls.push_back(conf_out[k].item<int>());
+                    float_boxes.push_back(float_box);
+                }
+
+                out_boxes[j] = float_boxes;
+                out_cls[j] = float_cls;
 
             }
             output_boxes.push_back(out_boxes);
@@ -339,17 +361,51 @@ public:
     }
 };
 
+void drawBoundingBox(cv::Mat& image, torch::Tensor tensor) {
+    // Ensure the tensor has the correct dimensions
+    assert(tensor.sizes() == torch::IntArrayRef({2, 4}) && "Tensor must be of shape [2, 4]");
 
-// void view_image(
-//     cv::Mat& img, 
-//     const& std::vector<std::map<int,torch::Tensor>> output_boxes, 
-//     const& std::vector<std::map<int,torch::Tensor>> output_classes,
-//     int batch_size
-// )
-// {
+    // Extract the coordinates from the tensor
+    float x1 = tensor[0][0].item<float>();
+    float y1 = tensor[0][1].item<float>();
+    float x2 = tensor[0][2].item<float>();
+    float y2 = tensor[0][3].item<float>();
+
+    // Draw the rectangle on the image
+    cv::rectangle(image, cv::Point(static_cast<int>(x1), static_cast<int>(y1)),
+                  cv::Point(static_cast<int>(x2), static_cast<int>(y2)),
+                  cv::Scalar(0, 255, 0), 2);
+}
+
+
+void view_image(
+    cv::Mat& img, 
+    std::vector<std::map<int, std::vector<std::vector<float>>>> output_boxes, 
+    std::vector<std::map<int, std::vector<int>>> output_classes,
+    int batch_size
+)
+{
+    for (int i=0; i<batch_size; i++)
+    {
+        for (int j=1; j<12;j++)
+        {
+            std::vector<std::vector<float>> boxes = output_boxes[i][j];
+            int instance = boxes.size();
+            for (int64_t k = 0; k < instance; k++)
+            {
+                std::vector<float> box = boxes[k];
+                float x1 = boxes[k][0];
+                float y1 = boxes[k][1];
+                float x2 = boxes[k][2];
+                float y2 = boxes[k][3];
+                cv::rectangle(img, cv::Point(static_cast<int>(x1), static_cast<int>(y1)),
+                  cv::Point(static_cast<int>(x2), static_cast<int>(y2)),
+                  cv::Scalar(0, 255, 0), 2);
+            }
+        }
+    }
     
-//     cv::rectangle(img, cv::Point(x,y), cv::Point(x+w, y+h), cv::Scalar(255,255,255), 2);
-// }
+}
 
 
 
@@ -405,26 +461,16 @@ int main() {
 
     DataEncoder encoder(img_size, num_classes);
 
-    std::vector<std::map<int, torch::Tensor>> output_boxes;
-    std::vector<std::map<int, torch::Tensor>> output_classes;  
+    std::vector<std::map<int, std::vector<std::vector<float>>>> output_boxes;
+    std::vector<std::map<int, std::vector<int>>> output_classes;  
     // std::map<int, torch::Tensor> out_boxes, out_cls;
 
 
     encoder.decode(boxes, classes, output_boxes, output_classes, batch_size);
 
-    for (int i=0; i<1; i++)
-    {
-        std::cout<<"######## batch: "<<i<<"\n";
-        for (int j=1; j<12;j++)
-        {
-            std::cout<<"### class: "<<j<<"\n";
-            std::cout<<output_boxes[i][j]<<"\n";
-            torch::IntArrayRef dimensions = output_boxes[i][j].sizes();
-            std::vector<int64_t> tensor_shape(dimensions.begin(), dimensions.end());
-            std::cout<<output_classes[i][j]<<"\n";
-        }
-    }
+    view_image(img, output_boxes, output_classes, batch_size);
 
+    bool result = cv::imwrite("output.jpg", img);
     return 0;
 
 }
