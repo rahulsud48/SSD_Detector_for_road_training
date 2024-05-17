@@ -340,44 +340,56 @@ public:
 };
 
 
+// void view_image(
+//     cv::Mat& img, 
+//     const& std::vector<std::map<int,torch::Tensor>> output_boxes, 
+//     const& std::vector<std::map<int,torch::Tensor>> output_classes,
+//     int batch_size
+// )
+// {
+    
+//     cv::rectangle(img, cv::Point(x,y), cv::Point(x+w, y+h), cv::Scalar(255,255,255), 2);
+// }
+
+
 
 int main() {
 
-    // // Load the model insde the `ssd_detector`
-    // std::string model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/tiny_model.pt";
-    // // load test image
-    // std::string image_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/test_image.jpg";
+    // Load the model insde the `ssd_detector`
+    std::string model_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/tiny_model.pt";
+    // load test image
+    std::string image_path = "/media/rahul/a079ceb2-fd12-43c5-b844-a832f31d5a39/Projects/autonomous_cars/Object_Detector_for_road/SSD_Detector_for_road_training/ssd_libTorch/build/test_image1.jpg";
 
-    // torch::jit::script::Module ssd_detector;
-    // load_model(&model_path, ssd_detector);
+    torch::jit::script::Module ssd_detector;
+    load_model(&model_path, ssd_detector);
 
-    // cv::Mat img;
-    // load_image(&image_path, &img);
+    cv::Mat img;
+    load_image(&image_path, &img);
 
-    // torch::Tensor img_tensor;
-    // transform_image(&img, &img_tensor);
+    torch::Tensor img_tensor;
+    transform_image(&img, &img_tensor);
 
 
-    // std::vector<torch::jit::IValue> jit_input;
-    // jit_input.push_back(img_tensor);
+    std::vector<torch::jit::IValue> jit_input;
+    jit_input.push_back(img_tensor);
 
-    // auto outputs = ssd_detector.forward(jit_input).toTuple();
-    // torch::Tensor boxes = outputs->elements()[0].toTensor();
-    // torch::Tensor classes = outputs->elements()[1].toTensor();
+    auto outputs = ssd_detector.forward(jit_input).toTuple();
+    torch::Tensor boxes = outputs->elements()[0].toTensor();
+    torch::Tensor classes = outputs->elements()[1].toTensor();
 
 
     // saveTensor(boxes, "boxes.bin");
     // saveTensor(classes, "classes.bin");
 
 
-    std::vector<int64_t> boxes_shape = {1, 17451, 4};
-    std::vector<int64_t> classes_shape = {1, 17451, 12};
+    // std::vector<int64_t> boxes_shape = {1, 17451, 4};
+    // std::vector<int64_t> classes_shape = {1, 17451, 12};
 
-    torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
-    torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
+    // torch::Tensor boxes_loaded = loadTensor("boxes.bin",boxes_shape);
+    // torch::Tensor classes_loaded = loadTensor("classes.bin", classes_shape);
 
-    std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
-    std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
+    // std::cout<<"Output size is loaded boxes"<<boxes_loaded.sizes()<<std::endl;
+    // std::cout<<"Output size is loaded classes"<<classes_loaded.sizes()<<std::endl;
 
     // vector<double> test = generate_anchor_boxes();
 
@@ -398,7 +410,7 @@ int main() {
     // std::map<int, torch::Tensor> out_boxes, out_cls;
 
 
-    encoder.decode(boxes_loaded, classes_loaded, output_boxes, output_classes, batch_size);
+    encoder.decode(boxes, classes, output_boxes, output_classes, batch_size);
 
     for (int i=0; i<1; i++)
     {
@@ -407,9 +419,10 @@ int main() {
         {
             std::cout<<"### class: "<<j<<"\n";
             std::cout<<output_boxes[i][j]<<"\n";
+            torch::IntArrayRef dimensions = output_boxes[i][j].sizes();
+            std::vector<int64_t> tensor_shape(dimensions.begin(), dimensions.end());
             std::cout<<output_classes[i][j]<<"\n";
         }
-
     }
 
     return 0;

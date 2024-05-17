@@ -33,10 +33,10 @@ link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
-MACRO(add_example name)
-  ADD_EXECUTABLE(${name} ${name}.cpp)
-  TARGET_LINK_LIBRARIES(${name} ${OpenCV_LIBS} )
-ENDMACRO()
+# MACRO(add_example name)
+#   ADD_EXECUTABLE(${name} ${name}.cpp)
+#   TARGET_LINK_LIBRARIES(${name} ${OpenCV_LIBS} )
+# ENDMACRO()
 
 # executable
 add_executable(inference src/inference.cpp)
