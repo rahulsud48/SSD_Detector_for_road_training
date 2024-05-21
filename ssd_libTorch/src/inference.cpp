@@ -341,11 +341,16 @@ public:
                 {
                     std::vector<float> float_box;
 
-                    // Extract the coordinates from the tensor
-                    for (int64_t l=0; l < tensor_shape[1]; l++)
-                    {
-                        float_box.push_back(boxes_out[k][l].item<float>());
-                    }
+                    // // Extract the coordinates from the tensor
+                    // for (int64_t l=0; l < tensor_shape[1]; l++)
+                    // {
+                    //     float_box.push_back(boxes_out[k][l].item<float>());
+                    // }
+                    float_box.push_back(boxes_out[k][0].item<float>() * 6.4);
+                    float_box.push_back(boxes_out[k][1].item<float>() * 4);
+                    float_box.push_back(boxes_out[k][2].item<float>() * 6.4);
+                    float_box.push_back(boxes_out[k][3].item<float>() * 4);
+
                     float_cls.push_back(conf_out[k].item<int>());
                     float_boxes.push_back(float_box);
                 }
@@ -422,6 +427,8 @@ int main() {
     cv::Mat img;
     load_image(&image_path, &img);
 
+    cv::Mat copiedImage = img.clone();
+
     torch::Tensor img_tensor;
     transform_image(&img, &img_tensor);
 
@@ -468,9 +475,9 @@ int main() {
 
     encoder.decode(boxes, classes, output_boxes, output_classes, batch_size);
 
-    view_image(img, output_boxes, output_classes, batch_size);
+    view_image(copiedImage, output_boxes, output_classes, batch_size);
 
-    bool result = cv::imwrite("output.jpg", img);
+    bool result = cv::imwrite("output.jpg", copiedImage);
     return 0;
 
 }
